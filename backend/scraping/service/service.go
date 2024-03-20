@@ -4,26 +4,26 @@ import (
 	"log/slog"
 	"strconv"
 
-	"github.com/gocolly/colly"
+	"github.com/gocolly/colly/v2"
 )
 
 type ServiceInterface interface {
 	ScrapingTopPage(url string) error
+	ScrapingReviewURLLists(url string) ([]string, error)
 	ScrapingReviews(url string) error
 }
 
 type serviceStruct struct {
-	// db
+	// TODO: db
+	cl *colly.Collector
 }
 
-func NewScrapingService() ServiceInterface {
-	return &serviceStruct{}
+func NewScrapingService(cl *colly.Collector) ServiceInterface {
+	return &serviceStruct{cl: cl}
 }
 
 func (s *serviceStruct) ScrapingTopPage(url string) error {
-	c := colly.NewCollector()
-
-	c.OnHTML("section.rdheader-info-wrap", func(e *colly.HTMLElement) {
+	s.cl.OnHTML("section.rdheader-info-wrap", func(e *colly.HTMLElement) {
 		storeName := e.ChildText("div.rdheader-rstname > h2.display-name")
 		aliasStoreName := e.ChildText("div.rdheader-rstname > span.alias")
 		scoreStr := e.ChildText("b.c-rating__val.rdheader-rating__score-val > span.rdheader-rating__score-val-dtl")
@@ -41,16 +41,44 @@ func (s *serviceStruct) ScrapingTopPage(url string) error {
 		slog.Info("ScrapingTopPage", "storeName", storeName, "aliasStoreName", aliasStoreName, "score", score)
 	})
 
-	c.OnRequest(func(r *colly.Request) {
+	s.cl.OnRequest(func(r *colly.Request) {
 		slog.Info("ScrapingTopPage", "Visiting", r.URL)
 	})
 
-	c.Visit(url)
+	s.cl.Visit(url)
 
 	return nil
 }
 
-func (s *serviceStruct) ScrapingReviews(url string) error {
+// https://tabelog.com/tokyo/A1305/A130501/13136428/dtlrvwlst/COND-0/smp1/D-like/1/?smp=1&lc=0&rvw_part=all
+// D-like/1の部分がページ数
+// 口コミのURLを一覧を取得
+func (s *serviceStruct) ScrapingReviewURLLists(url string) ([]string, error) {
+	var reviewURLs []string
 
-	return nil
+	// 口コミのURLを一覧を取得
+	s.cl.OnHTML("div.rstdtl-rvwlst", func(e *colly.HTMLElement) {
+		e.ForEach("div.js-rvw-item-clickable-area", func(_ int, el *colly.HTMLElement) {
+			link := el.ChildAttr("a.js-link-bookmark-detail", "data-detail-url")
+			if link != "" {
+				reviewURLs = append(reviewURLs, link)
+			}
+		})
+	})
+
+	s.cl.OnRequest(func(r *colly.Request) {
+		slog.Info("ScrapingTopPage", "Visiting", r.URL)
+	})
+
+	s.cl.Visit(url)
+
+	slog.Info("ScrapingReviews", "reviewURLs", reviewURLs)
+	// fmt.Printf("----- reviewURLs: %#v\n", reviewURLs)
+	return reviewURLs, nil
 }
+
+func (s *serviceStruct) ScrapingReviews(url string) {
+	slog.Info("--- getReviewURLLists ----", "url", url)
+}
+
+// 口コミID、口コミ、口コミに対するいいね、スコアを取得

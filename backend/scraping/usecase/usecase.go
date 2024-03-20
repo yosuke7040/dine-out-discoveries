@@ -3,11 +3,10 @@ package usecase
 import (
 	"context"
 	"log/slog"
-
-	// "fmt"
+	"strconv"
 	"time"
 
-	"github.com/gocolly/colly"
+	"github.com/gocolly/colly/v2"
 	"github.com/yosuke7040/dine-out-discoveries/scraping/service"
 )
 
@@ -29,6 +28,7 @@ func NewScrapingUseCase(ss service.ServiceInterface) UsecaseInterface {
 	return &usecaseStruct{ss: ss}
 }
 
+// スクレイピングお試し用
 func (u *usecaseStruct) Scraping() {
 	jst, _ := time.LoadLocation("Asia/Tokyo")
 	url := "https://www.tokyo-dome.co.jp/dome/event/schedule.html"
@@ -74,17 +74,21 @@ func (u *usecaseStruct) Scraping() {
 // https://~~/dtlrvwlst -> 口コミ
 // https://~~/dtlmap -> 地図
 func (u *usecaseStruct) CollectRestaurantInfo(ctx context.Context, url string) {
-
 	// topページの情報を取得
-	err := u.ss.ScrapingTopPage(url)
-	if err != nil {
+	if err := u.ss.ScrapingTopPage(url); err != nil {
 		slog.Error("ScrapingTopPage: ", err)
-		// fmt.Println("ScrapingTopPage error: ")
 	}
 
-	// 口コミの情報を取得
-	err = u.ss.ScrapingReviews(url + "dtlrvwlst")
-	if err != nil {
-		slog.Error("")
+	// 口コミの情報を20件ずつ取得
+	// httpS://~~~com/~~/dtlrvwlst/COND-0/smp1/?smp=1&lc=0&rvw_part=all&PG=1
+	// ↓いいね順の口コミ
+	// https:/〜〜/dtlrvwlst/COND-0/smp1/D-like/?smp=1&lc=0&rvw_part=all&pg=1
+	for i := 0; i < 2; i++ {
+		reviewURLs, err := u.ss.ScrapingReviewURLLists(url + "/dtlrvwlst/COND-0/smp1/D-like/" + strconv.Itoa(i+1) + "/?smp=1&lc=0&rvw_part=all")
+		if err != nil {
+			slog.Error("")
+		}
+
+		u.ss.
 	}
 }
