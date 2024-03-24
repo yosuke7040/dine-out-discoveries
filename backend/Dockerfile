@@ -29,3 +29,17 @@ WORKDIR /app
 RUN go install github.com/cosmtrek/air@v1.49.0
 
 CMD ["air"]
+
+
+# FROM golang:1.22-bookworm AS debugger
+# WORKDIR /app
+# COPY . .
+# RUN go get github.com/go-delve/delve/cmd/dlv
+# EXPOSE 3001 40000
+# ENTRYPOINT ["dlv", "debug", "--listen=:40000", "--headless", "--accept-multiclient", "--continue", "--api-version=2"]
+
+# FROM alpine:latest AS production
+# RUN apk --no-cache add ca-certificates
+# COPY --from=builder /app .
+# EXPOSE 3001
+# ENTRYPOINT ["./main"]

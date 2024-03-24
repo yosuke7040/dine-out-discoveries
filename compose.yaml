@@ -3,7 +3,35 @@ services:
     container_name: backend
     build:
       context: ./backend
+      target: develop
     ports:
       - 8000:8000
     volumes:
       - ./backend:/app
+  #   depends_on:
+  #     mysql:
+  #       condition: service_healthy
+  # frontend:
+  #   container_name: frontend
+  #   build:
+  #     context: ./frontend
+  # db:
+  #   build:
+  #     context: .
+  #   image: mysql:8.0.36
+  #   container_name: app_db
+  #   restart: always
+  #   ports:
+  #     - "3305:3306"
+  #   volumes:
+  #     - db-store:/var/lib/mysql
+  #   environment:
+  #     - MYSQL_DATABASE=app_db
+  #     - MYSQL_USER=admin
+  #     - MYSQL_PASSWORD=admin
+  #     - MYSQL_ROOT_PASSWORD=root
+  #   healthcheck:
+  #     test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+
+volumes:
+  db-store:
