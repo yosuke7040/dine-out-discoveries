@@ -5,9 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	adapter "github.com/yosuke7040/dine-out-discoveries/adapter/scraping"
 	"github.com/yosuke7040/dine-out-discoveries/infrastructure/router"
-	"github.com/yosuke7040/dine-out-discoveries/infrastructure/scraping"
 )
 
 type config struct {
@@ -15,7 +13,7 @@ type config struct {
 	webServerPort router.Port
 	ctxTimeout    time.Duration
 	// dbSQL repository.SQL
-	scraping adapter.CollyScraping
+	// scraping adapter.CollyScraping
 }
 
 func NewConfig() *config {
@@ -27,20 +25,20 @@ func (c *config) ContextTimeout(t time.Duration) *config {
 	return c
 }
 
-func (c *config) Scraping() *config {
-	scraping, err := scraping.NewScrapingFactory()
-	if err != nil {
-		slog.Error("Error configured scraping instance", "err", err)
-	}
-	c.scraping = scraping
-	return c
-}
+// func (c *config) ScrapingInstance() *config {
+// 	scraping, err := scraping.NewScrapingFactory()
+// 	if err != nil {
+// 		slog.Error("Error configured scraping instance", "err", err)
+// 	}
+// 	c.scraping = scraping
+// 	return c
+// }
 
 func (c *config) WebServer() *config {
 	s, err := router.NewWebServerFactory(
 		c.webServerPort,
 		c.ctxTimeout,
-		c.scraping,
+		// c.scraping,
 	)
 
 	if err != nil {

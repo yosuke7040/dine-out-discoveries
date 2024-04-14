@@ -20,20 +20,20 @@ type serverMuxEngine struct {
 	router     *http.ServeMux
 	port       Port
 	ctxTimeout time.Duration
-	scraping   adapterScraping.CollyScraping
+	// scraping   adapterScraping.CollyScraping
 	// scraping   adapterScraping.Scraping
 }
 
 func newServerMuxEngine(
 	port Port,
 	t time.Duration,
-	scraping adapterScraping.CollyScraping,
+	// scraping adapterScraping.CollyScraping,
 ) *serverMuxEngine {
 	return &serverMuxEngine{
 		router:     http.NewServeMux(),
 		port:       port,
 		ctxTimeout: t,
-		scraping:   scraping,
+		// scraping:   scraping,
 	}
 }
 
@@ -80,8 +80,8 @@ func (s *serverMuxEngine) setAppHandlers() {
 	})
 	s.router.HandleFunc("GET /healthcheck", s.healthcheck())
 
-	// s.router.HandleFunc("GET /scraping/restaurant", s.buildScrapingRestaurantAction())
 	s.router.HandleFunc("GET /scraping/sample", s.buildScrapingSampleAction())
+	s.router.HandleFunc("GET /scraping/restaurant", s.buildScrapingRestaurantAction())
 }
 
 func (s *serverMuxEngine) buildScrapingSampleAction() http.HandlerFunc {
@@ -89,11 +89,25 @@ func (s *serverMuxEngine) buildScrapingSampleAction() http.HandlerFunc {
 		uc := usecase.NewScrapingSampleInteractor(
 			// repository.NewRestaurantRepository(),
 			// s.scraping,
-			adapterScraping.NewTabelogScraping(s.scraping),
+			adapterScraping.NewTabelogScraping(),
+			// adapterScraping.NewTabelogScraping(s.scraping),
 			presenter.NewScrapingSamplePresenter(),
 			s.ctxTimeout,
 		)
 		act := action.NewScrapingSampleAction(uc)
+
+		act.Execute(w, r)
+	}
+}
+
+func (s *serverMuxEngine) buildScrapingRestaurantAction() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		uc := usecase.NewScrapingRestaurantInteractor(
+			adapterScraping.NewTabelogScraping(),
+			presenter.NewScrapingRestaurantPresenter(),
+			s.ctxTimeout,
+		)
+		act := action.NewScrapingRestaurantAction(uc)
 
 		act.Execute(w, r)
 	}

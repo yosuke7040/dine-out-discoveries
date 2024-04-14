@@ -2,8 +2,6 @@ package router
 
 import (
 	"time"
-
-	adapter "github.com/yosuke7040/dine-out-discoveries/adapter/scraping"
 )
 
 type Server interface {
@@ -15,7 +13,7 @@ type Port uint16
 func NewWebServerFactory(
 	port Port,
 	ctxTimeout time.Duration,
-	scraping adapter.CollyScraping,
+	// scraping adapter.CollyScraping,
 ) (Server, error) {
-	return newServerMuxEngine(port, ctxTimeout, scraping), nil
+	return newServerMuxEngine(port, ctxTimeout), nil
 }

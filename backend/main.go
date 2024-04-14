@@ -50,7 +50,8 @@ package main
 import "github.com/yosuke7040/dine-out-discoveries/infrastructure"
 
 func main() {
-	app := infrastructure.NewConfig().ScrapingInstance()
+	// app := infrastructure.NewConfig().ScrapingInstance()
+	app := infrastructure.NewConfig()
 
 	app.WebServerPort("8000").
 		WebServer().
