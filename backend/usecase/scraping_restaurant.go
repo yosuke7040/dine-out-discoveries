@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	adapter "github.com/yosuke7040/dine-out-discoveries/adapter/scraping"
@@ -53,6 +54,21 @@ func (i *ScrapingRestaurantInteractor) Execute(
 	err := i.scraping.GetRestaurantTopPage(ctx, input.Url)
 	if err != nil {
 		return ScrapingRestaurantOutput{}, err
+	}
+
+	urlLists, err := i.scraping.GetReviewUrlLists(ctx, input.Url)
+	if err != nil {
+		return ScrapingRestaurantOutput{}, err
+	}
+	slog.Info("ScrapingRestaurantInteractor", "urlLists", urlLists)
+
+	// ? クリーンアーキテクチャってループしていいか？
+	for _, url := range urlLists {
+		slog.Info("ScrapingRestaurantInteractor", "url", url)
+		err = i.scraping.GetReview(ctx, url)
+		if err != nil {
+			return ScrapingRestaurantOutput{}, err
+		}
 	}
 
 	return i.presenter.Output(), nil

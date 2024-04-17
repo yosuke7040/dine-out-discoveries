@@ -2,20 +2,22 @@ package scraping
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gocolly/colly/v2"
 )
 
-type TabelogScraping struct {
-	// scraping CollyScraping
-}
+type TabelogScraping struct{}
 
 type TabelogInterface interface {
 	GetSample(context.Context, string) error
 	GetRestaurantTopPage(context.Context, string) error
+	GetReviewUrlLists(context.Context, string) ([]string, error)
+	GetReview(context.Context, string) error
 }
 
 func NewTabelogScraping() *TabelogScraping {
@@ -126,32 +128,79 @@ func (s *TabelogScraping) GetRestaurantTopPage(ctx context.Context, url string) 
 }
 
 func (s *TabelogScraping) GetReviewUrlLists(ctx context.Context, url string) ([]string, error) {
+	cl := genColly()
+
+	var reviewURLs []string
+
+	cl.OnHTML("li#rdnavi-review", func(e *colly.HTMLElement) {
+		reviewTag := e.ChildAttr("a", "href")
+		if reviewTag != "" {
+			// レビュー件数を取得
+			reviewCnt := e.ChildText("span.rstdtl-navi__total-count > em")
+			slog.Info("ScrapingReviews", "reviewCnt", reviewCnt)
+
+			// レビュー一覧ページ番号
+			pageNum := 1
+
+			// レビュー一覧ページから個別レビューページを読み込み、パーシング
+			for ; pageNum <= 2; pageNum++ {
+				// TODO: 口コミの取得を標準、訪問月順、いいね順から選べるようにする？
+				reviewURL := fmt.Sprintf("%s/COND-0/smp1/?lc=0&rvw_part=all&PG=%d", reviewTag, pageNum)
+				reviewURLs = append(reviewURLs, reviewURL)
+			}
+		}
+	})
+
+	cl.OnRequest(func(r *colly.Request) {
+		slog.Info("ScrapingTopPage Visiting", "URL", r.URL)
+	})
+	cl.Visit(url)
+	// slog.Info("ScrapingReviews", "reviewURLs", reviewURLs)
+	return reviewURLs, nil
+}
+
+func (s *TabelogScraping) GetReview(ctx context.Context, reviewURL string) error {
+	cl := genColly()
+
+	cl.OnHTML("div.rvw-item", func(e *colly.HTMLElement) {
+		reviewDetailURL := e.ChildAttr("a.js-link-bookmark-detail", "data-detail-url")
+		slog.Info("GetReview", "reviewDetailURL", reviewDetailURL)
+		s.getReviewText(reviewDetailURL)
+	})
+
+	cl.OnRequest(func(r *colly.Request) {
+		slog.Info("GetReview Visiting", "URL", r.URL)
+	})
+	cl.Visit(reviewURL)
+
+	return nil
+}
+
+// TODO:getReviewDetailとかにして、口コミと点数を取得する（口コミ日も？）
+func (s *TabelogScraping) getReviewText(reviewDetailURL string) error {
+	cl := genColly()
+
+	cl.OnRequest(func(r *colly.Request) {
+		slog.Info("getReviewText Visiting", "URL", r.URL)
+	})
+
+	cl.OnHTML("div.rvw-item__rvw-comment", func(e *colly.HTMLElement) {
+		review := e.ChildText("p")
+		review = strings.TrimSpace(review)
+		slog.Info("ScrapingReviews", "review", review)
+	})
+
+	fullURL := "https://tabelog.com" + reviewDetailURL
+	cl.Visit(fullURL)
+
+	return nil
+}
+func genColly() *colly.Collector {
 	cl := colly.NewCollector()
 	cl.Limit(&colly.LimitRule{
 		DomainGlob:  "*tabelog.com*",
 		Delay:       1 * time.Second,
 		RandomDelay: 1 * time.Second,
 	})
-
-	var reviewURLs []string
-
-	// 口コミのURLを一覧を取得
-	cl.OnHTML("div.rstdtl-rvwlst", func(e *colly.HTMLElement) {
-		e.ForEach("div.js-rvw-item-clickable-area", func(_ int, el *colly.HTMLElement) {
-			link := el.ChildAttr("a.js-link-bookmark-detail", "data-detail-url")
-			if link != "" {
-				reviewURLs = append(reviewURLs, link)
-			}
-		})
-	})
-
-	cl.OnRequest(func(r *colly.Request) {
-		slog.Info("ScrapingTopPage", "Visiting", r.URL)
-	})
-
-	cl.Visit(url)
-
-	slog.Info("ScrapingReviews", "reviewURLs", reviewURLs)
-	// fmt.Printf("----- reviewURLs: %#v\n", reviewURLs)
-	return reviewURLs, nil
+	return cl
 }
