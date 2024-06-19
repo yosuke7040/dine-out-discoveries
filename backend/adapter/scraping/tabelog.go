@@ -195,6 +195,7 @@ func (s *TabelogScraping) getReviewText(reviewDetailURL string) error {
 
 	return nil
 }
+
 func genColly() *colly.Collector {
 	cl := colly.NewCollector()
 	cl.Limit(&colly.LimitRule{
